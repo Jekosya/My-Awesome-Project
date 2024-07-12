@@ -47,8 +47,7 @@ func CreateUserTable() error {
 	if _, err := db.Exec(query); err != nil {
 		return err
 	}
-
-	return nil
+	return err
 }
 
 // InsertUser вставляет нового пользователя в таблицу.
@@ -59,37 +58,30 @@ func InsertUser(user User) error {
 	}
 	defer db.Close()
 
-	query, args, err := PrepareQuery("insert", "users", user)
-	if err != nil {
-		return err
-	}
-
+	query, args := PrepareQuery("insert", "users", user)
 	_, err = db.Exec(query, args...)
 	if err != nil {
 		return err
 	}
-
-	return nil
+	return err
 }
 
 // SelectUser выбирает пользователя по его идентификатору.
 func SelectUser(userID int) (User, error) {
 	var user User
-
 	db, err := sql.Open("sqlite3", "users.db")
 	if err != nil {
 		return user, err
 	}
 	defer db.Close()
 
-	query, _, err := PrepareQuery("select", "users", user)
-	row := db.QueryRow(query, userID)
+	query, args := PrepareQuery("select", "users", user)
+	row := db.QueryRow(query, args...)
 	err = row.Scan(&user.ID, &user.Name, &user.Age)
 	if err != nil {
 		return user, err
 	}
-
-	return user, nil
+	return user, err
 }
 
 // UpdateUser обновляет информацию о пользователе.
@@ -100,8 +92,8 @@ func UpdateUser(user User) error {
 	}
 	defer db.Close()
 
-	query, _, err := PrepareQuery("update", "users", user)
-	_, err = db.Exec(query, user.Name, user.Age, user.ID)
+	query, args := PrepareQuery("update", "users", user)
+	_, err = db.Exec(query, args...)
 	return err
 }
 
@@ -114,12 +106,12 @@ func DeleteUser(userID int) error {
 	}
 	defer db.Close()
 
-	query, _, err := PrepareQuery("delete", "users", user)
-	_, err = db.Exec(query, userID)
+	query, args := PrepareQuery("delete", "users", user)
+	_, err = db.Exec(query, args...)
 	return err
 }
 
-func PrepareQuery(operation string, table string, user User) (string, []interface{}, error) {
+func PrepareQuery(operation string, table string, user User) (string, []interface{}) {
 	var query string
 	var args []interface{}
 	switch operation {
@@ -130,12 +122,12 @@ func PrepareQuery(operation string, table string, user User) (string, []interfac
 		query = "SELECT id, name, age FROM users"
 	case "update":
 		query = "UPDATE users SET name = ?, age = ? WHERE id = ?"
-		args = append(args, user.Name, user.Age, user.Comments)
+		args = append(args, user.Name, user.Age, user.ID)
 	case "delete":
 		query = "DELETE FROM users WHERE id = ?"
 		args = append(args, user.ID)
 	}
-	return query, args, nil
+	return query, args
 }
 
 func main() {
@@ -144,7 +136,6 @@ func main() {
 		fmt.Println("Ошибка создания таблицы пользователей и комментариев:", err)
 		return
 	}
-
 	// Примеры использования функций работы с пользователями
 	user := User{
 		Name: "John Doe",
